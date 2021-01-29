@@ -13,6 +13,9 @@ library(fasterize)
 library(dplyr)
 library(ggplot2)
 
+#clear
+rm(list=ls())
+
 #projection
 fiji_utm <- st_crs("+proj=utm +zone=60 +south +ellps=intl +towgs84=265.025,384.929,-194.046,0,0,0,0 +units=m +no_defs")
 
@@ -30,14 +33,22 @@ coastline_points2 <- st_transform(coastline_points, crs=fiji_utm)
 #reclassify values of each raster and shapefile 
 rcoast <- rland
 rcoast[] <- 1
-#npp <- length(pour_pts2)#same length as pour pts file
 
-iocean <- which(rland[] == 1) #we want the cell IDs for ocean cells
-oceandf <- data.frame(xyFromCell(rland, iocean), 
-                     cellID = iocean)
+iocean <- rcoast
+iocean <- which(rcoast[] == 1) #we want the cell IDs for ocean cells
+
+#iocean <- which(rland[] == 1) #we want the cell IDs for ocean cells
+#oceandf <- data.frame(xyFromCell(rland, iocean), 
+ #                    cellID = iocean)
+
+oceandf <- data.frame(xyFromCell(rcoast, iocean), 
+                      cellID = iocean)
+
+#oceandf <- data.frame(xyFromCell(rcoast, iocean), 
+                      #cellID = iocean)
 
 nocean <- length(iocean)
-npp <- nrow(pour_pts2) #number of pour points (hopefully?)
+npp <- nrow(pour_pts2) #number of pour points
 #'Preallocation' so R knows ahead of time memory size it 
 # will need to store our data
 distmat <- matrix(NA, nrow = npp, ncol = nocean)
@@ -83,7 +94,26 @@ for (ipp in 1:length(pour_pts2)){
 
 }
 
-#so what we need to save is
+
+x <- distmat #this is distmat
+b <- matrix(pour_pts2$Acc_sed, nrow = 26) #this is the sediment influence for each PP
+alpha <- -2.3 #from Brown et al. 2017 Table 1, north coast
+#this matrix algebra gives us the cumulative sediment at every cell. 
+cumulative_sed <- (t(x) ^ alpha ) %*% b
+#So this is just matrix algebra shorthand for:
+#multiple each row of b by all values of x in the 
+# corresponding row of x
+#then sum columns of x
+#cumulative_sed
+#once you have 'cumulative sed' then plot it:
+rsed <- raster(rcoast)
+rsed[iocean] <- cumulative_sed
+plot(rsed)
+
+
+
+##CB code writing and comments 
+
 # iocean 
 #so we know which columsn of 'distmat' correspond 
 # to which cells!
@@ -93,10 +123,10 @@ for (ipp in 1:length(pour_pts2)){
 
 #explanation of distmat and getting 'sediment' totals:
 #first I make up distmat and sed influence 
-x <- matrix(runif(10), nrow = 2, ncol = 5) #say this is distmat (2 pour points)
-b <- matrix(runif(2), nrow = 2) #this is the sediment influence for each PP
+#x <- matrix(runif(10), nrow = 2, ncol = 5) #say this is distmat (2 pour points)
+#b <- matrix(runif(2), nrow = 26) #this is the sediment influence for each PP
 
-alpha <- -2.3 #from Brown et al. 2017 Table 1, north coast
+#alpha <- -2.3 #from Brown et al. 2017 Table 1, north coast
 #this matrix algebra gives us the cumulative sediment at every cell. 
 cumulative_sed <- (t(x) ^ alpha ) %*% b
 #So this is just matrix algebra shorthand for:
@@ -117,7 +147,7 @@ plot(rsed)
 # NOTE:: Set the dimensions from number of rows, columns, and grid.dist dfs in list
 # in example below, this is number of rows = 14, number of columns = 5, number of dfs in list = 3
 
-grid.array <- array(as.numeric(unlist(grid.list)), dim=c(1483976, 26, 3)) #dont think these are correct. Ask CB.... 
+#grid.array <- array(as.numeric(unlist(grid.list)), dim=c(1483976, 26, 3)) #dont think these are correct. Ask CB.... 
 
 #save as a raster - writeraster 
 #writeRaster(gdist_sed, file="gdist_sed_11_1_21.tif", format = "GTiff") 
