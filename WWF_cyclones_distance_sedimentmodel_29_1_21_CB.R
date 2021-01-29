@@ -82,7 +82,7 @@ for (ipp in 1:length(pour_pts2)){
   gdist_sed <- gridDistance(rtemp, origin = 2,  omit = NA)
   
   #plot(gdist_sed)
-  #double check gdist_sed is a raster? 
+  #double check gdist_sed is a raster? it is 
   distmat[ipp, ] <- gdist_sed[iocean]/1000 #convert to km so its
   # consistent with my 2017 paper
   
